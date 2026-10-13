@@ -6,7 +6,7 @@ Date: 2026-10-13
 
 The React/Vite application builds and serves successfully. The authenticated browser session can reach the existing dashboard, role preview screens, and all primary navigation destinations. Supabase Auth connectivity responds successfully, but a valid test account was not supplied, so valid-login, role-specific authorization, database persistence, Realtime, GPS, and end-to-end tracking are not claimed as passing.
 
-The current UI remains substantially demo-driven outside the map surface. Live Fleet and Student Tracking now use a reusable Leaflet/OpenStreetMap component backed by Supabase bus, trip, route-stop, and current-location queries with Realtime location updates. Google billing is no longer required for local map development. The shared shell, authentication screens, operational panels, tables, statuses, and responsive controls now use a restrained white/black editorial design system.
+The current UI remains substantially demo-driven outside the map surface. Live Fleet and Student Tracking now use a reusable Leaflet/OpenStreetMap component backed by Supabase bus, trip, route-stop, and current-location queries with Realtime location updates. Google billing is no longer required for local map development. The shared shell, authentication screens, operational panels, tables, statuses, settings, logout action, and responsive controls now use a restrained white/black editorial design system.
 
 ## Result counts
 
@@ -14,11 +14,11 @@ These counts use grouped requirements rather than counting every individual sent
 
 | Result | Count |
 |---|---:|
-| PASS | 8 |
+| PASS | 9 |
 | FAIL | 0 |
 | BLOCKED | 2 |
 | NOT IMPLEMENTED | 6 |
-| NOT VERIFIED | 5 |
+| NOT VERIFIED | 4 |
 
 ## Traceability matrix
 
@@ -28,12 +28,12 @@ These counts use grouped requirements rather than counting every individual sent
 | Local dev server and page load | PASS | Vite served `http://127.0.0.1:5173/`; browser DOM loaded TransitPulse. |
 | Supabase endpoint configuration | PASS | `/auth/v1/settings` returned HTTP 200 using the local anon client key. |
 | Login screen and required-field UI | PASS | Auth screen rendered with email, password, sign-in, and registration controls when no session was present. |
-| Primary page navigation | PASS | Keyboard navigation reached Dashboard, Live Fleet, Students, Drivers, Buses, Routes & Stops, Trips, and Notifications. Responsive menu was opened and Dashboard was reached by pointer interaction. |
+| Primary page navigation | PASS | Keyboard navigation reached Dashboard, Live Fleet, Students, Drivers, Buses, Routes & Stops, Trips, and Notifications. Responsive menu was opened and Dashboard was reached by pointer interaction. Settings is now included in the SYSTEM navigation group. |
 | Student waiting control UI | PASS | Button changed to “You're marked as waiting”. Persistence was not claimed. |
 | Valid login | BLOCKED | No designated test-account email/password was provided. |
 | Invalid login response | NOT VERIFIED | The browser session became authenticated before the invalid-login form test could be completed; no account was altered. |
 | Registration, duplicate registration, password reset | BLOCKED | No safe test identity or reset mailbox was provided. Password reset UI is not implemented. |
-| Logout and session persistence | NOT VERIFIED | An authenticated session was present, but the current shell has no visible logout control. |
+| Settings and logout | PASS | Added a Settings route with account/session status, email-alert and compact-density toggles persisted to local storage, map-provider/theme details, an account-profile shortcut, and a Supabase-backed Sign out action. The sign-out button was not clicked during the smoke test to preserve the current session. |
 | Admin/Driver/Student authorization | NOT VERIFIED | Profile-role loading and active-profile gating exist, but three role accounts were not available for direct tests. |
 | CRUD for students, drivers, buses, routes, stops, trips | NOT IMPLEMENTED | Existing pages still render hardcoded demo arrays and demo actions. Service-layer coverage is partial. |
 | Database persistence and validation | NOT VERIFIED | Schema and RPCs were inspected, but no safe test records were created. |
@@ -65,6 +65,7 @@ These counts use grouped requirements rather than counting every individual sent
 - `src/lib/gps.ts`
 - `src/vite-env.d.ts`
 - `src/components/TransitMap.tsx`
+- `src/components/SettingsPanel.tsx`
 - `src/map.css`
 - `src/leaflet-map.css`
 - `src/editorial.css`
