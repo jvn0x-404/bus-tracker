@@ -1,0 +1,54 @@
+import { FormEvent, ReactNode, useEffect, useState } from 'react';
+import { isSupabaseConfigured, supabase } from './lib/supabase';
+import { getMyProfile, signIn, signOut, signUp } from './lib/services';
+import type { Profile } from './lib/types';
+
+interface AuthGateProps { children: ReactNode }
+
+export function AuthGate({ children }: AuthGateProps) {
+  const [session, setSession] = useState<Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return undefined;
+    let mounted = true;
+    void supabase.auth.getSession().then(({ data }) => { if (mounted) setSession(data.session); });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (mounted) setSession(nextSession);
+    });
+    return () => { mounted = false; listener.subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    if (!session) { setProfile(null); return; }
+    void getMyProfile().then(({ data, error }) => {
+      if (error) setMessage(error.message);
+      else setProfile(data);
+    }).catch((error: unknown) => setMessage(error instanceof Error ? error.message : 'Profile could not be loaded.'));
+  }, [session]);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true); setMessage('');
+    try {
+      const result = mode === 'signin'
+        ? await signIn(email, password)
+        : await signUp(email, password, fullName);
+      if (result.error) throw result.error;
+      setMessage(mode === 'signup' ? 'Account created. Check your email if confirmation is enabled.' : 'Signed in.');
+    } catch (error: unknown) {
+      setMessage(error instanceof Error ? error.message : 'Authentication failed.');
+    } finally { setBusy(false); }
+  }
+
+  if (!isSupabaseConfigured) return <main className="auth-card"><p className="auth-kicker">TRANSITPULSE / CAMPUS MOBILITY</p><h1>TransitPulse setup</h1><p>Add your Supabase publishable or legacy anon key to <code>.env.local</code>, then restart Vite.</p><p>Required for login: <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> or <code>VITE_SUPABASE_ANON_KEY</code>.</p></main>;
+  if (!session) return <main className="auth-card"><p className="auth-kicker">TRANSITPULSE / CAMPUS MOBILITY</p><h1>{mode === 'signin' ? 'Welcome back' : 'Create your account'}</h1><p>Sign in to access authorized transport data.</p><form onSubmit={submit} className="auth-form"><label>Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>{mode === 'signup' && <label>Full name<input required value={fullName} onChange={(event) => setFullName(event.target.value)} /></label>}<label>Password<input required minLength={8} type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label><button className="primary" disabled={busy}>{busy ? 'Working…' : mode === 'signin' ? 'Sign in' : 'Register'}</button></form>{message && <p role="status">{message}</p>}<button className="text-button" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>{mode === 'signin' ? 'Create an account' : 'Back to sign in'}</button></main>;
+  if (!profile?.is_active) return <main className="auth-card"><p className="auth-kicker">TRANSITPULSE / CAMPUS MOBILITY</p><h1>Account pending</h1><p>Your account is authenticated, but no active TransitPulse profile is available yet. Ask an authorized administrator to activate your role.</p><button className="secondary" onClick={() => void signOut()}>Sign out</button>{message && <p role="status">{message}</p>}</main>;
+  return <>{children}</>;
+}

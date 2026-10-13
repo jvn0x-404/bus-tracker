@@ -1,0 +1,7 @@
+.leaflet-map { height: 100%; min-height: 360px; width: 100%; z-index: 1; }
+.bus-marker, .stop-marker { background: transparent; border: 0; }
+.bus-marker-dot { display: grid; place-items: center; width: 28px; height: 28px; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 3px 10px #06101dcc; color: #22c55e; background: #052e1a; font-size: 18px; line-height: 1; }
+.bus-marker-dot.stale { color: #f59e0b; background: #451a03; }
+.bus-marker-dot.offline { color: #94a3b8; background: #1e293b; }
+.bus-marker-dot.selected { transform: scale(1.2); box-shadow: 0 0 0 5px #60a5fa66, 0 3px 10px #06101dcc; }
+.stop-marker span { display: grid; place-items: center; width: 16px; height: 16px; border: 2px solid #082f49; border-radius: 50%; color: #22d3ee; background: #cffafe; font-size: 12px; box-shadow: 0 2px 6px #06101dcc; }
