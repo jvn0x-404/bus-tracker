@@ -4,7 +4,7 @@ import { CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, useMap 
 import L from 'leaflet';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { loadMapSnapshot, subscribeToLocations } from '../lib/services';
-import type { BusLocation, MapSnapshot } from '../lib/types';
+import type { BusLocation, MapSnapshot, Route, RouteStopRow } from '../lib/types';
 
 const STALE_AFTER_MS = 30_000;
 type TransitMapProps = { mode?: 'fleet' | 'student' | 'driver' };
@@ -26,6 +26,20 @@ function stopIcon() {
   return L.divIcon({ className: 'stop-marker', html: '<span>●</span>', iconSize: [18, 18], iconAnchor: [9, 9] });
 }
 
+function mergeStoredDemoRoutes(snapshot: MapSnapshot): MapSnapshot {
+  try {
+    const stored = JSON.parse(localStorage.getItem('transitpulse-demo-routes') ?? '[]') as Array<{ name?: string; code?: string; stops?: string; coordinatePath?: Array<[number, number]> }>;
+    const demoRoutes = stored.filter((route) => route.name && route.code && route.stops && route.coordinatePath?.length);
+    const routes: Route[] = demoRoutes.map((route) => ({ id: `demo-${route.code}`, name: route.name!, route_code: route.code! }));
+    const routeStops: RouteStopRow[] = demoRoutes.flatMap((route) => {
+      const routeId = `demo-${route.code}`;
+      const names = route.stops!.split(',').map((stop) => stop.trim()).filter(Boolean);
+      return names.map((name, index) => ({ route_id: routeId, stop_id: `${routeId}-stop-${index}`, stop_order: index, sequence_no: index, stops: { id: `${routeId}-stop-${index}`, name, latitude: route.coordinatePath![index]?.[0] ?? null, longitude: route.coordinatePath![index]?.[1] ?? null } }));
+    });
+    return { ...snapshot, routes: [...snapshot.routes, ...routes], routeStops: [...snapshot.routeStops, ...routeStops] };
+  } catch { return snapshot; }
+}
+
 function MapController({ center, recenterKey }: { center: { lat: number; lng: number }; recenterKey: number }) {
   const map = useMap();
   useEffect(() => { map.setView(center, Math.max(map.getZoom(), 13), { animate: true }); }, [center.lat, center.lng, map, recenterKey]);
@@ -42,7 +56,7 @@ export function TransitMap({ mode = 'fleet' }: TransitMapProps) {
 
   async function refresh() {
     if (!isSupabaseConfigured) return;
-    try { setError(''); setSnapshot(await loadMapSnapshot()); }
+    try { setError(''); setSnapshot(mergeStoredDemoRoutes(await loadMapSnapshot())); }
     catch (reason: unknown) { setError(reason instanceof Error ? reason.message : 'Unable to load live fleet data.'); }
   }
 
@@ -65,7 +79,7 @@ export function TransitMap({ mode = 'fleet' }: TransitMapProps) {
   const selectedBus = snapshot?.buses.find((bus) => bus.id === selectedBusId) ?? buses[0];
   const selectedTrip = snapshot?.trips.find((trip) => trip.bus_id === selectedBus?.id);
   const selectedLocation = snapshot?.locations.find((location) => location.bus_id === selectedBus?.id && validPoint(location.latitude, location.longitude));
-  const selectedRoute = snapshot?.routes.find((route) => route.id === (selectedRouteId ?? selectedTrip?.route_id));
+  const selectedRoute = snapshot?.routes.find((route) => route.id === (selectedRouteId ?? selectedTrip?.route_id)) ?? snapshot?.routes.find((route) => (snapshot?.routeStops ?? []).some((item) => item.route_id === route.id && validPoint(item.stops?.latitude, item.stops?.longitude)));
   const selectedRouteStops = (snapshot?.routeStops ?? []).filter((item) => item.route_id === selectedRoute?.id).sort((a, b) => (a.sequence_no ?? a.stop_order) - (b.sequence_no ?? b.stop_order));
   const validStops = selectedRouteStops.filter((item) => validPoint(item.stops?.latitude, item.stops?.longitude));
   const validLocations = (snapshot?.locations ?? []).filter((location) => validPoint(location.latitude, location.longitude));
