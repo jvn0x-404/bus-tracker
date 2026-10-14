@@ -9,13 +9,6 @@ export async function signIn(email: string, password: string) {
   return requireSupabase().auth.signInWithPassword({ email, password });
 }
 
-export async function signInWithGoogle() {
-  return requireSupabase().auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.origin, skipBrowserRedirect: true },
-  });
-}
-
 export async function signUp(email: string, password: string, fullName: string) {
   return requireSupabase().auth.signUp({ email, password, options: { data: { full_name: fullName } } });
 }
