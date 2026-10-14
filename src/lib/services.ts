@@ -12,7 +12,7 @@ export async function signIn(email: string, password: string) {
 export async function signInWithGoogle() {
   return requireSupabase().auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.origin },
+    options: { redirectTo: window.location.origin, skipBrowserRedirect: true },
   });
 }
 

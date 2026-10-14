@@ -55,11 +55,38 @@ export function AuthGate({ children }: AuthGateProps) {
 
   async function continueWithGoogle() {
     setBusy(true); setMessage('');
+    if (import.meta.env.VITE_GOOGLE_AUTH_ENABLED !== 'true') {
+      setMessage('Google sign-in is not enabled yet. Enable Google in Supabase Authentication → Providers, add the OAuth credentials, then set VITE_GOOGLE_AUTH_ENABLED=true.');
+      setBusy(false);
+      return;
+    }
     try {
       const result = await signInWithGoogle();
       if (result.error) throw result.error;
+      if (result.data.url) {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+        let response: Response;
+        try {
+          response = await fetch(result.data.url, {
+            headers: { Accept: 'application/json' },
+            redirect: 'manual',
+            signal: controller.signal,
+          });
+        } finally {
+          window.clearTimeout(timeoutId);
+        }
+        if (response.status >= 400) {
+          const payload = await response.json().catch(() => null) as { msg?: string } | null;
+          throw new Error(payload?.msg || 'Google sign-in could not be started.');
+        }
+        window.location.assign(result.data.url);
+      }
     } catch (error: unknown) {
-      setMessage(error instanceof Error ? error.message : 'Google sign-in could not be started.');
+      const detail = error instanceof Error ? error.message : 'Google sign-in could not be started.';
+      setMessage(detail.toLowerCase().includes('provider is not enabled')
+        ? 'Google sign-in is not enabled yet. Enable Google in Supabase Authentication → Providers, then try again.'
+        : detail);
       setBusy(false);
     }
   }
